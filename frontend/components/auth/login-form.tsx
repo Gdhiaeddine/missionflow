@@ -28,7 +28,7 @@ export function LoginForm() {
   })
 
   const next = searchParams.get("next")
-  const redirectTo = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"
+  const redirectTo = next && next.startsWith("/") && !next.startsWith("//") ? next : "/missions/new"
 
   useEffect(() => {
     if (status === "authenticated") router.replace(redirectTo)

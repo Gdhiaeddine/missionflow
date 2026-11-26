@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Save } from "lucide-react"
+import { Plus, Save, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
@@ -17,6 +17,9 @@ export function SettingsView() {
   const { data, isLoading } = useSettings()
   const updateSettings = useUpdateSettings()
   const [form, setForm] = useState<AppSettings | null>(null)
+  const [newResidence, setNewResidence] = useState("")
+  const [newSubject, setNewSubject] = useState("")
+  const [newPosition, setNewPosition] = useState("")
 
   useEffect(() => {
     if (data && !form) {
@@ -114,6 +117,342 @@ export function SettingsView() {
                 value={form.department.contactName ?? ""}
                 onChange={(e) => setForm({ ...form, department: { ...form.department, contactName: e.target.value } })}
               />
+            </Field>
+            <Field className="sm:col-span-2">
+              <FieldLabel htmlFor="newResidence">Résidences administratives</FieldLabel>
+              <div className="flex gap-2">
+                <Input
+                  id="newResidence"
+                  placeholder="Ex. Sétif"
+                  value={newResidence}
+                  onChange={(e) => setNewResidence(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      const val = newResidence.trim()
+                      if (!val) return
+                      const current = form.preferences.residenceOptions ?? []
+                      if (!current.includes(val)) {
+                        const next = [...current, val]
+                        setForm({
+                          ...form,
+                          preferences: {
+                            ...form.preferences,
+                            residenceOptions: next,
+                            defaultResidence: form.preferences.defaultResidence || val,
+                          },
+                        })
+                      }
+                      setNewResidence("")
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const val = newResidence.trim()
+                    if (!val) return
+                    const current = form.preferences.residenceOptions ?? []
+                    if (!current.includes(val)) {
+                      const next = [...current, val]
+                      setForm({
+                        ...form,
+                        preferences: {
+                          ...form.preferences,
+                          residenceOptions: next,
+                          defaultResidence: form.preferences.defaultResidence || val,
+                        },
+                      })
+                    }
+                    setNewResidence("")
+                  }}
+                >
+                  <Plus className="size-4" />
+                  Ajouter
+                </Button>
+              </div>
+              <FieldDescription>
+                Seules ces résidences apparaîtront dans le formulaire de création. Cochez celle par défaut.
+              </FieldDescription>
+              {(form.preferences.residenceOptions ?? []).length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {(form.preferences.residenceOptions ?? []).map((item) => {
+                    const isDefault = (form.preferences.defaultResidence || form.preferences.residenceOptions?.[0]) === item
+                    return (
+                      <li
+                        key={item}
+                        className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm"
+                      >
+                        <label className="flex cursor-pointer items-center gap-2">
+                          <input
+                            type="radio"
+                            name="defaultResidence"
+                            checked={isDefault}
+                            onChange={() =>
+                              setForm({
+                                ...form,
+                                preferences: { ...form.preferences, defaultResidence: item },
+                              })
+                            }
+                          />
+                          <span>{item}</span>
+                          {isDefault && (
+                            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[11px] font-medium text-blue-700">
+                              Par défaut
+                            </span>
+                          )}
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`Supprimer ${item}`}
+                          onClick={() => {
+                            const next = (form.preferences.residenceOptions ?? []).filter((r) => r !== item)
+                            const nextDefault =
+                              form.preferences.defaultResidence === item ? next[0] ?? "" : form.preferences.defaultResidence
+                            setForm({
+                              ...form,
+                              preferences: {
+                                ...form.preferences,
+                                residenceOptions: next,
+                                defaultResidence: nextDefault,
+                              },
+                            })
+                          }}
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </Field>
+            <Field className="sm:col-span-2">
+              <FieldLabel htmlFor="newSubject">Motifs de déplacement</FieldLabel>
+              <div className="flex gap-2">
+                <Input
+                  id="newSubject"
+                  placeholder="Ex. Livraison de produits pharmaceutiques"
+                  value={newSubject}
+                  onChange={(e) => setNewSubject(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      const val = newSubject.trim()
+                      if (!val) return
+                      const current = form.preferences.subjectOptions ?? []
+                      if (!current.includes(val)) {
+                        const next = [...current, val]
+                        setForm({
+                          ...form,
+                          preferences: {
+                            ...form.preferences,
+                            subjectOptions: next,
+                            defaultSubject: form.preferences.defaultSubject || val,
+                          },
+                        })
+                      }
+                      setNewSubject("")
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const val = newSubject.trim()
+                    if (!val) return
+                    const current = form.preferences.subjectOptions ?? []
+                    if (!current.includes(val)) {
+                      const next = [...current, val]
+                      setForm({
+                        ...form,
+                        preferences: {
+                          ...form.preferences,
+                          subjectOptions: next,
+                          defaultSubject: form.preferences.defaultSubject || val,
+                        },
+                      })
+                    }
+                    setNewSubject("")
+                  }}
+                >
+                  <Plus className="size-4" />
+                  Ajouter
+                </Button>
+              </div>
+              <FieldDescription>
+                Seuls ces motifs apparaîtront dans le formulaire de création. Cochez celui par défaut.
+              </FieldDescription>
+              {(form.preferences.subjectOptions ?? []).length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {(form.preferences.subjectOptions ?? []).map((item) => {
+                    const isDefault = (form.preferences.defaultSubject || form.preferences.subjectOptions?.[0]) === item
+                    return (
+                      <li
+                        key={item}
+                        className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm"
+                      >
+                        <label className="flex cursor-pointer items-center gap-2">
+                          <input
+                            type="radio"
+                            name="defaultSubject"
+                            checked={isDefault}
+                            onChange={() =>
+                              setForm({
+                                ...form,
+                                preferences: { ...form.preferences, defaultSubject: item },
+                              })
+                            }
+                          />
+                          <span>{item}</span>
+                          {isDefault && (
+                            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[11px] font-medium text-blue-700">
+                              Par défaut
+                            </span>
+                          )}
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`Supprimer ${item}`}
+                          onClick={() => {
+                            const next = (form.preferences.subjectOptions ?? []).filter((s) => s !== item)
+                            const nextDefault =
+                              form.preferences.defaultSubject === item ? next[0] ?? "" : form.preferences.defaultSubject
+                            setForm({
+                              ...form,
+                              preferences: {
+                                ...form.preferences,
+                                subjectOptions: next,
+                                defaultSubject: nextDefault,
+                              },
+                            })
+                          }}
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </Field>
+            <Field className="sm:col-span-2">
+              <FieldLabel htmlFor="newPosition">Fonctions (Employés)</FieldLabel>
+              <div className="flex gap-2">
+                <Input
+                  id="newPosition"
+                  placeholder="Ex. Chauffeur, Agent d'expédition…"
+                  value={newPosition}
+                  onChange={(e) => setNewPosition(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      const val = newPosition.trim()
+                      if (!val) return
+                      const current = form.preferences.positionOptions ?? []
+                      if (!current.includes(val)) {
+                        const next = [...current, val]
+                        setForm({
+                          ...form,
+                          preferences: {
+                            ...form.preferences,
+                            positionOptions: next,
+                            defaultPosition: form.preferences.defaultPosition || val,
+                          },
+                        })
+                      }
+                      setNewPosition("")
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const val = newPosition.trim()
+                    if (!val) return
+                    const current = form.preferences.positionOptions ?? []
+                    if (!current.includes(val)) {
+                      const next = [...current, val]
+                      setForm({
+                        ...form,
+                        preferences: {
+                          ...form.preferences,
+                          positionOptions: next,
+                          defaultPosition: form.preferences.defaultPosition || val,
+                        },
+                      })
+                    }
+                    setNewPosition("")
+                  }}
+                >
+                  <Plus className="size-4" />
+                  Ajouter
+                </Button>
+              </div>
+              <FieldDescription>
+                Seules ces fonctions apparaîtront lors de la création d&apos;un employé. Cochez celle par défaut.
+              </FieldDescription>
+              {(form.preferences.positionOptions ?? []).length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {(form.preferences.positionOptions ?? []).map((item) => {
+                    const isDefault = (form.preferences.defaultPosition || form.preferences.positionOptions?.[0]) === item
+                    return (
+                      <li
+                        key={item}
+                        className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm"
+                      >
+                        <label className="flex cursor-pointer items-center gap-2">
+                          <input
+                            type="radio"
+                            name="defaultPosition"
+                            checked={isDefault}
+                            onChange={() =>
+                              setForm({
+                                ...form,
+                                preferences: { ...form.preferences, defaultPosition: item },
+                              })
+                            }
+                          />
+                          <span>{item}</span>
+                          {isDefault && (
+                            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[11px] font-medium text-blue-700">
+                              Par défaut
+                            </span>
+                          )}
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label={`Supprimer ${item}`}
+                          onClick={() => {
+                            const next = (form.preferences.positionOptions ?? []).filter((p) => p !== item)
+                            const nextDefault =
+                              form.preferences.defaultPosition === item ? next[0] ?? "" : form.preferences.defaultPosition
+                            setForm({
+                              ...form,
+                              preferences: {
+                                ...form.preferences,
+                                positionOptions: next,
+                                defaultPosition: nextDefault,
+                              },
+                            })
+                          }}
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
             </Field>
           </FieldGroup>
         </SectionCard>

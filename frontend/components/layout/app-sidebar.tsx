@@ -56,7 +56,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="gap-3 border-b px-3 py-4">
         <Link
-          href="/dashboard"
+          href="/missions/new"
           className="flex w-full flex-col items-center gap-2 text-center"
           onClick={() => setOpenMobile(false)}
         >
@@ -78,7 +78,10 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarMenu>
             {items.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              const active =
+                item.href === "/missions"
+                  ? pathname === "/missions" || (pathname.startsWith("/missions/") && pathname !== "/missions/new")
+                  : pathname === item.href || pathname.startsWith(`${item.href}/`)
               const children = item.children?.filter((child) => !child.permission || can(child.permission))
 
               if (children?.length) {
@@ -116,6 +119,11 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     isActive={active}
                     tooltip={item.title}
+                    className={
+                      item.highlight === "primary"
+                        ? "bg-blue-600 font-medium text-white shadow-xs hover:bg-blue-700 hover:text-white data-[active=true]:bg-blue-700 data-[active=true]:text-white"
+                        : undefined
+                    }
                     render={<Link href={item.href} onClick={() => setOpenMobile(false)} />}
                   >
                     <item.icon />

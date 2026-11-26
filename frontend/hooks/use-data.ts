@@ -7,6 +7,7 @@ import * as missionsApi from "@/lib/api/missions"
 import * as approvalsApi from "@/lib/api/approvals"
 import * as documentsApi from "@/lib/api/documents"
 import * as employeesApi from "@/lib/api/employees"
+import * as vehiclesApi from "@/lib/api/vehicles"
 import * as usersApi from "@/lib/api/users"
 import * as settingsApi from "@/lib/api/settings"
 
@@ -217,6 +218,49 @@ export function useUpdateSettings() {
       queryClient.setQueryData(queryKeys.settings, settings)
       queryClient.invalidateQueries({ queryKey: queryKeys.nextReference })
       toast.success("Paramètres enregistrés.")
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  })
+}
+
+
+export function useVehicles() {
+  return useQuery({
+    queryKey: ["vehicles"],
+    queryFn: vehiclesApi.listVehicles,
+  })
+}
+
+export function useCreateVehicle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: vehiclesApi.VehicleInput) => vehiclesApi.createVehicle(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] })
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  })
+}
+
+export function useUpdateVehicle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: vehiclesApi.VehicleInput }) => vehiclesApi.updateVehicle(id, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] })
+      toast.success("Véhicule mis à jour")
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  })
+}
+
+export function useDeleteVehicle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => vehiclesApi.deleteVehicle(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vehicles"] })
+      toast.success("Véhicule supprimé")
     },
     onError: (error) => toast.error(errorMessage(error)),
   })

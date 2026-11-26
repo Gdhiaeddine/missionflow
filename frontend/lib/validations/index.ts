@@ -80,15 +80,14 @@ export const employeeSchema = z.object({
     .refine((v) => v === "" || (v.length >= 3 && /^[A-Z0-9-]+$/i.test(v)), {
       message: "Le matricule doit contenir au moins 3 caractères (lettres, chiffres et tirets).",
     }),
-  lastName: z.string().trim().min(2, "Le nom est obligatoire."),
-  firstName: z.string().trim().min(2, "Le prénom est obligatoire."),
+  lastName: z.string().trim().min(2, "Le nom complet est obligatoire."),
+  firstName: z.string().trim().optional().default(""),
   birthDate: optionalText,
   position: z.string().trim().min(2, "La fonction est obligatoire."),
   phone: z
     .string()
     .trim()
-    .min(8, "Le numéro de téléphone est obligatoire.")
-    .regex(/^[+\d\s().-]+$/, "Numéro de téléphone invalide."),
+    .refine((v) => v === "" || /^[+\d\s().-]+$/.test(v), "Numéro de téléphone invalide."),
   address: optionalText,
   hireDate: optionalText,
   status: z.enum(["ACTIF", "INACTIF"]),

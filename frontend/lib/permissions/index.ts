@@ -67,9 +67,7 @@ const MATRIX: Record<Role, Permission[]> = {
     "document.print",
     "employee.view",
     "employee.manage",
-    "approval.view",
     "printHistory.view",
-    "report.view",
   ],
   LECTURE_SEULE: ["mission.view", "document.download", "employee.view"],
 }

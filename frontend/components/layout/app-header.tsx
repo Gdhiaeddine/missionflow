@@ -56,7 +56,7 @@ export function AppHeader() {
       <Breadcrumb className="hidden min-w-0 sm:block">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link href="/dashboard" />}>Accueil</BreadcrumbLink>
+            <BreadcrumbLink render={<Link href="/missions/new" />}>Accueil</BreadcrumbLink>
           </BreadcrumbItem>
           {parent && (
             <>

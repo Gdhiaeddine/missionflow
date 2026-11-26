@@ -129,3 +129,15 @@ model Settings {
 
   @@map("settings")
 }
+
+model Vehicle {
+  id             String @id
+  name           String
+  registration   String @unique
+  type           String
+  transportation String @default("VEHICULE_SERVICE")
+  createdAt      String
+  updatedAt      String
+
+  @@map("vehicles")
+}

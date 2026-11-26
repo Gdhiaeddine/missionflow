@@ -46,7 +46,7 @@ export function AccessDenied() {
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button variant="outline" render={<Link href="/dashboard" />}>
+        <Button variant="outline" render={<Link href="/missions/new" />}>
           Retour au tableau de bord
         </Button>
       </EmptyContent>

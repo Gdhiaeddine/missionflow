@@ -15,9 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { SimpleSelect } from "@/components/shared/simple-select"
-import { useSaveEmployee } from "@/hooks/use-data"
+import { useSaveEmployee, useSettings } from "@/hooks/use-data"
 import { employeeSchema, type EmployeeFormValues } from "@/lib/validations"
 import type { Employee } from "@/types"
 
@@ -56,19 +56,27 @@ interface EmployeeDialogProps {
 export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogProps) {
   const isEdit = !!employee
   const saveEmployee = useSaveEmployee(employee?.id)
+  const { data: settings } = useSettings()
+  const positionOptions = (settings?.preferences?.positionOptions ?? []).filter(Boolean)
+  const defaultPosition = settings?.preferences?.defaultPosition || positionOptions[0] || ""
 
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
-    defaultValues: employee ? toFormValues(employee) : EMPTY_VALUES,
+    defaultValues: employee ? toFormValues(employee) : { ...EMPTY_VALUES, position: defaultPosition },
     mode: "onTouched",
   })
   const { errors } = form.formState
 
   useEffect(() => {
     if (open) {
-      form.reset(employee ? toFormValues(employee) : EMPTY_VALUES)
+      if (employee) {
+        const fullName = [employee.lastName, employee.firstName].filter(Boolean).join(" ").trim()
+        form.reset({ ...toFormValues(employee), lastName: fullName, firstName: "" })
+      } else {
+        form.reset({ ...EMPTY_VALUES, position: defaultPosition })
+      }
     }
-  }, [open, employee, form])
+  }, [open, employee, defaultPosition, form])
 
   async function onSubmit(data: EmployeeFormValues) {
     try {
@@ -96,71 +104,33 @@ export function EmployeeDialog({ open, onOpenChange, employee }: EmployeeDialogP
 
         <form noValidate onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <FieldGroup className="grid gap-4 sm:grid-cols-2">
-            <Field data-invalid={!!errors.employeeNumber || undefined}>
-              <FieldLabel htmlFor="employeeNumber">Matricule</FieldLabel>
-              <Input
-                id="employeeNumber"
-                placeholder="Automatique si vide (ex. EMP-001)"
-                aria-invalid={!!errors.employeeNumber}
-                {...form.register("employeeNumber")}
-              />
-              {!isEdit && <FieldDescription>Laissez vide pour générer automatiquement.</FieldDescription>}
-              <FieldError errors={[errors.employeeNumber]} />
+            <Field data-invalid={!!errors.lastName || undefined} className="sm:col-span-2">
+              <FieldLabel htmlFor="lastName">Nom complet *</FieldLabel>
+              <Input id="lastName" placeholder="Ex. Benali Karim" aria-invalid={!!errors.lastName} {...form.register("lastName")} />
+              <FieldError errors={[errors.lastName]} />
             </Field>
             <Controller
               control={form.control}
-              name="status"
+              name="position"
               render={({ field }) => (
-                <Field>
-                  <FieldLabel htmlFor="employeeStatus">Statut *</FieldLabel>
+                <Field data-invalid={!!errors.position || undefined}>
+                  <FieldLabel htmlFor="position">Fonction *</FieldLabel>
                   <SimpleSelect
-                    id="employeeStatus"
+                    id="position"
                     value={field.value}
                     onValueChange={field.onChange}
-                    options={[
-                      { value: "ACTIF", label: "Actif" },
-                      { value: "INACTIF", label: "Inactif" },
-                    ]}
+                    invalid={!!errors.position}
+                    placeholder="Sélectionner une fonction"
+                    options={positionOptions.map((p) => ({ value: p, label: p }))}
                   />
+                  <FieldError errors={[errors.position]} />
                 </Field>
               )}
             />
-            <Field data-invalid={!!errors.lastName || undefined}>
-              <FieldLabel htmlFor="lastName">Nom *</FieldLabel>
-              <Input id="lastName" aria-invalid={!!errors.lastName} {...form.register("lastName")} />
-              <FieldError errors={[errors.lastName]} />
-            </Field>
-            <Field data-invalid={!!errors.firstName || undefined}>
-              <FieldLabel htmlFor="firstName">Prénom *</FieldLabel>
-              <Input id="firstName" aria-invalid={!!errors.firstName} {...form.register("firstName")} />
-              <FieldError errors={[errors.firstName]} />
-            </Field>
-            <Field data-invalid={!!errors.position || undefined} className="sm:col-span-2">
-              <FieldLabel htmlFor="position">Fonction *</FieldLabel>
-              <Input
-                id="position"
-                placeholder="Ex. Chauffeur poids lourd, Agent d'expédition…"
-                aria-invalid={!!errors.position}
-                {...form.register("position")}
-              />
-              <FieldError errors={[errors.position]} />
-            </Field>
-            <Field data-invalid={!!errors.phone || undefined} className="sm:col-span-2">
-              <FieldLabel htmlFor="phone">Téléphone *</FieldLabel>
+            <Field data-invalid={!!errors.phone || undefined}>
+              <FieldLabel htmlFor="phone">Téléphone</FieldLabel>
               <Input id="phone" placeholder="0550 00 00 00" aria-invalid={!!errors.phone} {...form.register("phone")} />
               <FieldError errors={[errors.phone]} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="hireDate">Date d&apos;embauche</FieldLabel>
-              <Input id="hireDate" type="date" {...form.register("hireDate")} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="birthDate">Date de naissance</FieldLabel>
-              <Input id="birthDate" type="date" {...form.register("birthDate")} />
-            </Field>
-            <Field className="sm:col-span-2">
-              <FieldLabel htmlFor="address">Adresse</FieldLabel>
-              <Input id="address" {...form.register("address")} />
             </Field>
           </FieldGroup>
 

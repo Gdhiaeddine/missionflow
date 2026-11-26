@@ -231,8 +231,6 @@ export function MissionsList() {
                   <TableHead className="hidden md:table-cell">Destination</TableHead>
                   <TableHead className="hidden lg:table-cell">Départ</TableHead>
                   <TableHead className="hidden lg:table-cell">Retour</TableHead>
-                  <TableHead className="hidden xl:table-cell">Durée</TableHead>
-                  <TableHead>Statut</TableHead>
                   <TableHead className="w-12 pr-4">
                     <span className="sr-only">Actions</span>
                   </TableHead>
@@ -242,7 +240,7 @@ export function MissionsList() {
                 {isLoading &&
                   Array.from({ length: 6 }, (_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={8} className="px-4">
+                      <TableCell colSpan={6} className="px-4">
                         <Skeleton className="h-6 w-full" />
                       </TableCell>
                     </TableRow>
@@ -277,10 +275,6 @@ export function MissionsList() {
                       <TableCell className="hidden md:table-cell">{mission.destination}</TableCell>
                       <TableCell className="hidden tabular-nums lg:table-cell">{formatDate(mission.departureDate)}</TableCell>
                       <TableCell className="hidden tabular-nums lg:table-cell">{formatDate(mission.returnDate)}</TableCell>
-                      <TableCell className="hidden xl:table-cell">{duration.valid ? pluralDays(duration.days) : "—"}</TableCell>
-                      <TableCell>
-                        <MissionStatusBadge status={mission.status} />
-                      </TableCell>
                       <TableCell className="pr-4" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger

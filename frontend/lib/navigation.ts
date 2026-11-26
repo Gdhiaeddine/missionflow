@@ -1,6 +1,8 @@
 import {
   BarChart3,
+  Car,
   CheckSquare,
+  FilePlus2,
   FileText,
   LayoutDashboard,
   Printer,
@@ -22,27 +24,27 @@ export interface NavItem {
   href: string
   icon: LucideIcon
   permission?: Permission
+  highlight?: "primary"
   children?: NavChild[]
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { title: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+  {
+    title: "Nouvel ordre",
+    href: "/missions/new",
+    icon: FilePlus2,
+    permission: "mission.create",
+    highlight: "primary",
+  },
   {
     title: "Ordres de mission",
     href: "/missions",
     icon: FileText,
     permission: "mission.view",
-    children: [
-      { title: "Tous les ordres", href: "/missions" },
-      { title: "Nouvel ordre de mission", href: "/missions/new", permission: "mission.create" },
-      { title: "Brouillons", href: "/missions?status=BROUILLON" },
-      { title: "En attente de validation", href: "/missions?status=EN_ATTENTE" },
-      { title: "Validés", href: "/missions?status=VALIDE" },
-      { title: "Refusés", href: "/missions?status=REFUSE" },
-      { title: "Annulés", href: "/missions?status=ANNULE" },
-    ],
   },
+  { title: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard, permission: "report.view" },
   { title: "Personnel", href: "/employees", icon: Users, permission: "employee.view" },
+  { title: "Véhicules", href: "/vehicles", icon: Car, permission: "mission.view" },
   { title: "Validation des ordres", href: "/approvals", icon: CheckSquare, permission: "approval.view" },
   { title: "Historique d'impression", href: "/print-history", icon: Printer, permission: "printHistory.view" },
   { title: "Rapports et statistiques", href: "/reports", icon: BarChart3, permission: "report.view" },
@@ -58,6 +60,7 @@ const TITLES: { match: RegExp; title: string; parent?: { title: string; href: st
   { match: /^\/missions\/[^/]+\/document$/, title: "Document officiel", parent: { title: "Ordres de mission", href: "/missions" } },
   { match: /^\/missions\/[^/]+$/, title: "Détail de l'ordre", parent: { title: "Ordres de mission", href: "/missions" } },
   { match: /^\/employees$/, title: "Personnel" },
+  { match: /^\/vehicles$/, title: "Véhicules" },
   { match: /^\/employees\/new$/, title: "Nouvel employé", parent: { title: "Personnel", href: "/employees" } },
   { match: /^\/employees\/[^/]+$/, title: "Fiche employé", parent: { title: "Personnel", href: "/employees" } },
   { match: /^\/approvals$/, title: "Validation des ordres" },

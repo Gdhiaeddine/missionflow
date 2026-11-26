@@ -185,10 +185,26 @@ export interface AppSettings {
     dateFormat: "dd/MM/yyyy" | "dd MMM yyyy" | "yyyy-MM-dd"
     timeFormat: "24h" | "12h"
     pageSize: number
+    defaultResidence?: string
+    residenceOptions?: string[]
+    defaultSubject?: string
+    subjectOptions?: string[]
+    defaultPosition?: string
+    positionOptions?: string[]
     notifyOnSubmission: boolean
     notifyOnDecision: boolean
     notifyOnPrint: boolean
   }
+}
+
+export interface Vehicle {
+  id: string
+  name: string
+  registration: string
+  type: string
+  transportation: "VEHICULE_SERVICE" | "VEHICULE_PERSONNEL"
+  createdAt: string
+  updatedAt: string
 }
 
 export interface MissionWithEmployee extends Mission {

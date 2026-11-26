@@ -19,20 +19,12 @@ export function MissionDocument({ mission, employee, settings, className }: Miss
   return (
     <article
       className={cn(
-        "print-area relative mx-auto flex aspect-[210/297] w-full max-w-[210mm] flex-col bg-white text-[15px] leading-relaxed text-slate-900 shadow-sm ring-1 ring-slate-200",
+        "print-area relative mx-auto flex aspect-[210/297] w-full max-w-[210mm] flex-col bg-white text-[17px] leading-relaxed text-slate-900 shadow-sm ring-1 ring-slate-200",
         className,
       )}
       style={{ padding: `${doc.marginMm}mm` }}
       aria-label={`Ordre de mission ${mission.reference}`}
     >
-      {!isOfficial && (
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
-          <span className="-rotate-30 text-7xl font-bold tracking-widest text-slate-200/80 uppercase">
-            Non validé
-          </span>
-        </div>
-      )}
-
       <header
         className={cn(
           "relative flex items-center gap-4 border-b-2 border-slate-900 pb-3",
@@ -82,8 +74,7 @@ export function MissionDocument({ mission, employee, settings, className }: Miss
         </DocSection>
 
         <DocSection title="Motif de déplacement" titleAr="سبب التنقل">
-          <DocRow label="Type de mission" labelAr="نوع المهمة" value={MISSION_TYPE_LABELS[mission.missionType]} />
-          <DocRow label="Motif" labelAr="الموضوع" value={mission.subject} full />
+          <DocRow label="Motif de déplacement" labelAr="الموضوع" value={mission.subject} full />
           {mission.description && <DocRow label="Description" labelAr="الوصف" value={mission.description} full />}
         </DocSection>
 
@@ -96,8 +87,8 @@ export function MissionDocument({ mission, employee, settings, className }: Miss
             labelAr="تاريخ الذهاب"
             value={
               mission.departureDate
-                ? `${formatDate(mission.departureDate)}${mission.departureTime ? ` à ${mission.departureTime}` : ""}`
-                : "—"
+                ? `${formatDate(mission.departureDate)}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${mission.departureTime || "H\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0Min"}`
+                : "H\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0Min"
             }
           />
           <DocRow
@@ -105,21 +96,30 @@ export function MissionDocument({ mission, employee, settings, className }: Miss
             labelAr="تاريخ العودة"
             value={
               mission.returnDate
-                ? `${formatDate(mission.returnDate)}${mission.returnTime ? ` à ${mission.returnTime}` : ""}`
-                : "—"
+                ? `${formatDate(mission.returnDate)}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0${mission.returnTime || "H\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0Min"}`
+                : "H\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0Min"
             }
           />
         </DocSection>
 
         <DocSection title="Moyen de transport" titleAr="وسيلة النقل">
-          <DocRow label="Transport" labelAr="النقل" value={TRANSPORTATION_LABELS[mission.transportation]} />
-          {mission.vehicleName && <DocRow label="Type de véhicule" labelAr="نوع المركبة" value={mission.vehicleName} />}
-          {mission.vehicleRegistration && (
-            <DocRow label="Immatriculation" labelAr="رقم التسجيل" value={mission.vehicleRegistration} />
+          <DocRow label="Transport" labelAr="النقل" value={TRANSPORTATION_LABELS[mission.transportation]} full />
+          {(mission.vehicleName || mission.vehicleRegistration) && (
+            <DocRow
+              label="Type de véhicule"
+              labelAr="نوع المركبة"
+              value={[mission.vehicleName, mission.vehicleRegistration].filter(Boolean).join(" ")}
+            />
           )}
           {mission.estimatedExpenses !== undefined && (
             <DocRow label="Frais estimés" labelAr="المصاريف التقديرية" value={formatCurrency(mission.estimatedExpenses)} />
           )}
+        </DocSection>
+
+        <DocSection title="Suivi kilométrique et carburant" titleAr="متابعة العداد والوقود">
+          <DocRow label="Index de départ" value=" " full />
+          <DocRow label="Index de retour" value=" " full />
+          <DocRow label="Index carburant" value=" " full />
         </DocSection>
 
         {(mission.instructions || mission.observations) && (
@@ -148,13 +148,9 @@ export function MissionDocument({ mission, employee, settings, className }: Miss
   )
 }
 
-function DocSection({ title, titleAr, children }: { title: string; titleAr?: string; children: React.ReactNode }) {
+function DocSection({ children }: { title?: string; titleAr?: string; children: React.ReactNode }) {
   return (
-    <section className="print-avoid-break flex flex-col gap-2.5">
-      <h2 className="flex items-center justify-between border-b border-slate-300 pb-1 text-sm font-bold tracking-wider text-slate-700 uppercase">
-        <span>{title}</span>
-        {titleAr && <span dir="rtl">{titleAr}</span>}
-      </h2>
+    <section className="print-avoid-break flex flex-col gap-2.5 border-t border-slate-200 pt-2.5 first:border-t-0 first:pt-0">
       <dl className="flex flex-col gap-2">{children}</dl>
     </section>
   )
@@ -173,7 +169,7 @@ function DocRow({
   return (
     <div className="flex items-baseline justify-between gap-2">
       <div className="flex min-w-0 items-baseline gap-2">
-        <dt className="w-44 shrink-0 text-slate-500">{label}</dt>
+        <dt className="w-52 shrink-0 text-slate-500">{label}</dt>
         <dd className="font-semibold">{value || "—"}</dd>
       </div>
       {labelAr && (

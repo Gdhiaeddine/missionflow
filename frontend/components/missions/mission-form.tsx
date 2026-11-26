@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -25,7 +25,8 @@ import {
 import { PageHeader } from "@/components/shared/page-header"
 import { SimpleSelect } from "@/components/shared/simple-select"
 import { EmployeeCombobox } from "@/components/missions/employee-combobox"
-import { useCreateMission, useEmployees, useMissionSuggestions, useNextReference, useUpdateMission, useUsers } from "@/hooks/use-data"
+import { VehicleCombobox } from "@/components/missions/vehicle-combobox"
+import { useCreateMission, useCreateVehicle, useEmployees, useMissionSuggestions, useNextReference, useSettings, useUpdateMission, useUsers, useVehicles } from "@/hooks/use-data"
 import { useAuth } from "@/providers/auth-provider"
 import { missionSchema, type MissionFormValues } from "@/lib/validations"
 import {
@@ -105,12 +106,16 @@ export function MissionForm({ mission }: { mission?: Mission }) {
   const { user, can } = useAuth()
   const isEdit = !!mission
   const { data: nextReference } = useNextReference()
+  const { data: settings } = useSettings()
   const { data: suggestions } = useMissionSuggestions()
   const { data: employees = [] } = useEmployees()
+  const { data: vehicles = [] } = useVehicles()
   const { data: users = [] } = useUsers()
   const createMission = useCreateMission()
+  const createVehicle = useCreateVehicle()
   const updateMission = useUpdateMission(mission?.id ?? "")
   const [pendingAction, setPendingAction] = useState<"draft" | "submit" | null>(null)
+  const [vehicleMode, setVehicleMode] = useState<"existing" | "new">("existing")
 
   const form = useForm<MissionFormValues>({
     resolver: zodResolver(missionSchema),
@@ -133,9 +138,52 @@ export function MissionForm({ mission }: { mission?: Mission }) {
   const wasApproved = mission?.status === "VALIDE" || mission?.status === "EN_ATTENTE"
   const showVehicle = values.transportation === "VEHICULE_SERVICE" || values.transportation === "VEHICULE_PERSONNEL"
 
+  const residenceOptions = useMemo(() => {
+    const list = (settings?.preferences?.residenceOptions ?? []).filter(Boolean)
+    return list.map((item) => ({ value: item, label: item }))
+  }, [settings?.preferences?.residenceOptions])
+
+  const subjectOptions = useMemo(() => {
+    const list = (settings?.preferences?.subjectOptions ?? []).filter(Boolean)
+    return list.map((item) => ({ value: item, label: item }))
+  }, [settings?.preferences?.subjectOptions])
+
+  useEffect(() => {
+    const defaultRes = settings?.preferences?.defaultResidence || settings?.preferences?.residenceOptions?.[0]
+    if (!isEdit && defaultRes && !form.getValues("serviceAssignment")) {
+      form.setValue("serviceAssignment", defaultRes)
+    }
+    const defaultSubj = settings?.preferences?.defaultSubject || settings?.preferences?.subjectOptions?.[0]
+    if (!isEdit && defaultSubj && !form.getValues("subject")) {
+      form.setValue("subject", defaultSubj)
+    }
+  }, [
+    isEdit,
+    settings?.preferences?.defaultResidence,
+    settings?.preferences?.residenceOptions,
+    settings?.preferences?.defaultSubject,
+    settings?.preferences?.subjectOptions,
+    form,
+  ])
+
   async function save(data: MissionFormValues, submit: boolean) {
     setPendingAction(submit ? "submit" : "draft")
     try {
+      if (
+        (data.transportation === "VEHICULE_SERVICE" || data.transportation === "VEHICULE_PERSONNEL") &&
+        data.vehicleRegistration?.trim() &&
+        data.vehicleName?.trim() &&
+        !vehicles.some((v) => v.registration === data.vehicleRegistration?.trim())
+      ) {
+        await createVehicle
+          .mutateAsync({
+            name: data.vehicleName.trim(),
+            type: data.vehicleName.trim(),
+            registration: data.vehicleRegistration.trim(),
+            transportation: data.transportation as "VEHICULE_SERVICE" | "VEHICULE_PERSONNEL",
+          })
+          .catch(() => {})
+      }
       if (isEdit && mission) {
         const result = await updateMission.mutateAsync(data)
         if (result.requiresReapproval) {
@@ -147,11 +195,11 @@ export function MissionForm({ mission }: { mission?: Mission }) {
         }
         router.push(`/missions/${mission.id}`)
       } else {
-        const created = await createMission.mutateAsync({ input: data, submit })
-        toast.success(submit ? "Ordre de mission soumis pour validation" : "Brouillon enregistré", {
+        const created = await createMission.mutateAsync({ input: data, submit: false })
+        toast.success("Ordre de mission créé", {
           description: created.reference,
         })
-        router.push(`/missions/${created.id}`)
+        router.push(`/missions/${created.id}/document`)
       }
     } catch {
       // Errors are surfaced by the mutation's toast handler.
@@ -225,55 +273,38 @@ export function MissionForm({ mission }: { mission?: Mission }) {
             <FieldGroup className="grid gap-4 sm:grid-cols-2">
               <Controller
                 control={form.control}
-                name="missionType"
+                name="serviceAssignment"
                 render={({ field }) => (
-                  <Field data-invalid={!!errors.missionType || undefined}>
-                    <FieldLabel htmlFor="missionType">Type de mission *</FieldLabel>
+                  <Field>
+                    <FieldLabel htmlFor="serviceAssignment">Résidence administrative</FieldLabel>
                     <SimpleSelect
-                      id="missionType"
-                      value={field.value}
+                      id="serviceAssignment"
+                      value={field.value ?? ""}
                       onValueChange={field.onChange}
-                      invalid={!!errors.missionType}
-                      options={MISSION_TYPES.map((t) => ({ value: t, label: MISSION_TYPE_LABELS[t] }))}
+                      placeholder="Sélectionner une résidence"
+                      options={residenceOptions}
                     />
-                    <FieldError errors={[errors.missionType]} />
                   </Field>
                 )}
               />
-              <Field>
-                <FieldLabel htmlFor="serviceAssignment">Résidence administrative</FieldLabel>
-                <Input
-                  id="serviceAssignment"
-                  list="service-assignments"
-                  placeholder="Ex. Sétif"
-                  {...form.register("serviceAssignment")}
-                />
-                <datalist id="service-assignments">
-                  {(suggestions?.serviceAssignments ?? []).map((item) => (
-                    <option key={item} value={item} />
-                  ))}
-                </datalist>
-              </Field>
-              <Field data-invalid={!!errors.subject || undefined} className="sm:col-span-2">
-                <FieldLabel htmlFor="subject">Motif de déplacement *</FieldLabel>
-                <Input
-                  id="subject"
-                  list="mission-subjects"
-                  placeholder="Ex. Livraison de produits pharmaceutiques au client…"
-                  aria-invalid={!!errors.subject}
-                  {...form.register("subject")}
-                />
-                <datalist id="mission-subjects">
-                  {(suggestions?.subjects ?? []).map((item) => (
-                    <option key={item} value={item} />
-                  ))}
-                </datalist>
-                <FieldError errors={[errors.subject]} />
-              </Field>
-              <Field className="sm:col-span-2">
-                <FieldLabel htmlFor="description">Description</FieldLabel>
-                <Textarea id="description" rows={3} {...form.register("description")} />
-              </Field>
+              <Controller
+                control={form.control}
+                name="subject"
+                render={({ field }) => (
+                  <Field data-invalid={!!errors.subject || undefined} className="sm:col-span-2">
+                    <FieldLabel htmlFor="subject">Motif de déplacement *</FieldLabel>
+                    <SimpleSelect
+                      id="subject"
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      invalid={!!errors.subject}
+                      placeholder="Sélectionner un motif"
+                      options={subjectOptions}
+                    />
+                    <FieldError errors={[errors.subject]} />
+                  </Field>
+                )}
+              />
             </FieldGroup>
           </FormSection>
 
@@ -328,36 +359,20 @@ export function MissionForm({ mission }: { mission?: Mission }) {
                 <FieldLabel htmlFor="departureLocation">Lieu de départ *</FieldLabel>
                 <Input
                   id="departureLocation"
-                  list="departure-locations"
                   aria-invalid={!!errors.departureLocation}
                   {...form.register("departureLocation")}
                 />
-                <datalist id="departure-locations">
-                  {(suggestions?.departureLocations ?? []).map((item) => (
-                    <option key={item} value={item} />
-                  ))}
-                </datalist>
                 <FieldError errors={[errors.departureLocation]} />
               </Field>
               <Field data-invalid={!!errors.destination || undefined}>
                 <FieldLabel htmlFor="destination">Région (Se rendre à) *</FieldLabel>
                 <Input
                   id="destination"
-                  list="destinations"
                   placeholder="Ex. Alger, Oran, Sétif…"
                   aria-invalid={!!errors.destination}
                   {...form.register("destination")}
                 />
-                <datalist id="destinations">
-                  {Array.from(new Set([...(suggestions?.destinations ?? []), ...DESTINATIONS])).map((d) => (
-                    <option key={d} value={d} />
-                  ))}
-                </datalist>
                 <FieldError errors={[errors.destination]} />
-              </Field>
-              <Field className="sm:col-span-2">
-                <FieldLabel htmlFor="destinationAddress">Adresse de destination</FieldLabel>
-                <Input id="destinationAddress" {...form.register("destinationAddress")} />
               </Field>
               <Field data-invalid={!!errors.departureDate || undefined}>
                 <FieldLabel htmlFor="departureDate">Date de départ</FieldLabel>
@@ -393,152 +408,121 @@ export function MissionForm({ mission }: { mission?: Mission }) {
             </FieldGroup>
           </FormSection>
 
-          <FormSection legend="Transport et frais" description="Moyen de transport utilisé pour la mission">
+          <FormSection legend="Transport" description="Moyen de transport utilisé pour la mission">
             <FieldGroup className="grid gap-4 sm:grid-cols-2">
-              <Controller
-                control={form.control}
-                name="transportation"
-                render={({ field }) => (
-                  <Field data-invalid={!!errors.transportation || undefined}>
-                    <FieldLabel htmlFor="transportation">Moyen de transport *</FieldLabel>
-                    <SimpleSelect
-                      id="transportation"
-                      value={field.value}
-                      onValueChange={(v) => {
-                        field.onChange(v)
-                        form.trigger("vehicleRegistration")
-                      }}
-                      options={TRANSPORTATIONS.map((t) => ({ value: t, label: TRANSPORTATION_LABELS[t] }))}
+              <Field className="sm:col-span-2">
+                <FieldLabel>Mode de sélection du véhicule</FieldLabel>
+                <div className="flex flex-wrap gap-4 pt-1">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="vehicleMode"
+                      checked={vehicleMode === "existing"}
+                      onChange={() => setVehicleMode("existing")}
                     />
-                    <FieldError errors={[errors.transportation]} />
-                  </Field>
-                )}
-              />
-              {showVehicle && (
-                <>
-                  {values.transportation === "VEHICULE_SERVICE" && (
-                    <Field>
-                      <FieldLabel htmlFor="vehicleName">Type de véhicule</FieldLabel>
-                      <Input
-                        id="vehicleName"
-                        list="vehicle-names"
-                        placeholder="Ex. Sprinter"
-                        {...form.register("vehicleName")}
+                    <span>Véhicule existant</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="vehicleMode"
+                      checked={vehicleMode === "new"}
+                      onChange={() => {
+                        setVehicleMode("new")
+                        form.setValue("vehicleName", "")
+                        form.setValue("vehicleRegistration", "")
+                      }}
+                    />
+                    <span>Nouveau véhicule</span>
+                  </label>
+                </div>
+              </Field>
+
+              {vehicleMode === "new" && (
+                <Controller
+                  control={form.control}
+                  name="transportation"
+                  render={({ field }) => (
+                    <Field data-invalid={!!errors.transportation || undefined}>
+                      <FieldLabel htmlFor="transportation">Moyen de transport *</FieldLabel>
+                      <SimpleSelect
+                        id="transportation"
+                        value={field.value}
+                        onValueChange={(v) => {
+                          field.onChange(v)
+                          form.trigger("vehicleRegistration")
+                        }}
+                        options={TRANSPORTATIONS.map((t) => ({ value: t, label: TRANSPORTATION_LABELS[t] }))}
                       />
-                      <datalist id="vehicle-names">
-                        {(suggestions?.vehicleNames ?? []).map((item) => (
-                          <option key={item} value={item} />
-                        ))}
-                      </datalist>
+                      <FieldError errors={[errors.transportation]} />
                     </Field>
                   )}
-                  <Field data-invalid={!!errors.vehicleRegistration || undefined}>
-                    <FieldLabel htmlFor="vehicleRegistration">
-                      Immatriculation{values.transportation === "VEHICULE_SERVICE" ? " *" : ""}
-                    </FieldLabel>
-                    <Input
-                      id="vehicleRegistration"
-                      list="vehicle-registrations"
-                      placeholder="Ex. 111111.121.19"
-                      aria-invalid={!!errors.vehicleRegistration}
-                      {...form.register("vehicleRegistration")}
-                    />
-                    <datalist id="vehicle-registrations">
-                      {(suggestions?.vehicleRegistrations ?? []).map((item) => (
-                        <option key={item} value={item} />
-                      ))}
-                    </datalist>
-                    <FieldError errors={[errors.vehicleRegistration]} />
-                  </Field>
+                />
+              )}
+              {showVehicle && (
+                <>
+
+                  {vehicleMode === "existing" ? (
+                    <Field className="sm:col-span-2">
+                      <FieldLabel htmlFor="vehicleSelect">Véhicule enregistré</FieldLabel>
+                      <VehicleCombobox
+                        id="vehicleSelect"
+                        vehicles={vehicles}
+                        value={vehicles.find((v) => v.registration === values.vehicleRegistration)?.id ?? ""}
+                        onChange={(id) => {
+                          const found = vehicles.find((v) => v.id === id)
+                          if (found) {
+                            form.setValue("transportation", found.transportation ?? "VEHICULE_SERVICE")
+                            form.setValue("vehicleName", found.name)
+                            form.setValue("vehicleRegistration", found.registration)
+                            form.trigger("vehicleRegistration")
+                          }
+                        }}
+                      />
+                    </Field>
+                  ) : (
+                    <>
+                      {values.transportation === "VEHICULE_SERVICE" && (
+                        <Field>
+                          <FieldLabel htmlFor="vehicleName">Nom / Modèle du véhicule</FieldLabel>
+                          <Input
+                            id="vehicleName"
+                            list="vehicle-names"
+                            placeholder="Ex. Sprinter"
+                            {...form.register("vehicleName")}
+                          />
+                          <datalist id="vehicle-names">
+                            {(suggestions?.vehicleNames ?? []).map((item) => (
+                              <option key={item} value={item} />
+                            ))}
+                          </datalist>
+                        </Field>
+                      )}
+                      <Field data-invalid={!!errors.vehicleRegistration || undefined}>
+                        <FieldLabel htmlFor="vehicleRegistration">
+                          Immatriculation{values.transportation === "VEHICULE_SERVICE" ? " *" : ""}
+                        </FieldLabel>
+                        <Input
+                          id="vehicleRegistration"
+                          list="vehicle-registrations"
+                          placeholder="Ex. 111111.121.19"
+                          aria-invalid={!!errors.vehicleRegistration}
+                          {...form.register("vehicleRegistration")}
+                        />
+                        <datalist id="vehicle-registrations">
+                          {(suggestions?.vehicleRegistrations ?? []).map((item) => (
+                            <option key={item} value={item} />
+                          ))}
+                        </datalist>
+                        <FieldError errors={[errors.vehicleRegistration]} />
+                      </Field>
+                    </>
+                  )}
                 </>
               )}
             </FieldGroup>
           </FormSection>
 
-          <FormSection legend="Instructions et observations">
-            <FieldGroup className="grid gap-4 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="instructions">Instructions</FieldLabel>
-                <Textarea id="instructions" rows={3} {...form.register("instructions")} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="observations">Observations</FieldLabel>
-                <Textarea id="observations" rows={3} {...form.register("observations")} />
-              </Field>
-              <Controller
-                control={form.control}
-                name="attachments"
-                render={({ field }) => (
-                  <Field className="sm:col-span-2">
-                    <FieldLabel htmlFor="attachments">Pièces jointes</FieldLabel>
-                    <Input
-                      id="attachments"
-                      type="file"
-                      multiple
-                      onChange={(e) => {
-                        const names = Array.from(e.target.files ?? []).map((f) => f.name)
-                        field.onChange(Array.from(new Set([...field.value, ...names])))
-                        e.target.value = ""
-                      }}
-                    />
-                    <FieldDescription>
-                      Bons de livraison, convocations… Seuls les noms de fichiers sont conservés en mode démonstration.
-                    </FieldDescription>
-                    {field.value.length > 0 && (
-                      <ul className="flex flex-wrap gap-2">
-                        {field.value.map((name) => (
-                          <li key={name}>
-                            <Badge variant="secondary" className="gap-1.5 pr-1">
-                              <Paperclip />
-                              {name}
-                              <button
-                                type="button"
-                                className="rounded-sm p-0.5 hover:bg-background"
-                                aria-label={`Retirer ${name}`}
-                                onClick={() => field.onChange(field.value.filter((n) => n !== name))}
-                              >
-                                <X className="size-3" />
-                              </button>
-                            </Badge>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </Field>
-                )}
-              />
-            </FieldGroup>
-          </FormSection>
-
-          {can("mission.editValidated") && (
-            <FormSection legend="Administration" description="Visible uniquement par les administrateurs">
-              <FieldGroup className="grid gap-4 sm:grid-cols-2">
-                <Controller
-                  control={form.control}
-                  name="approverId"
-                  render={({ field }) => (
-                    <Field>
-                      <FieldLabel htmlFor="approverId">Validateur désigné</FieldLabel>
-                      <SimpleSelect
-                        id="approverId"
-                        value={field.value ?? ""}
-                        onValueChange={field.onChange}
-                        placeholder="Tout responsable"
-                        options={[
-                          { value: "", label: "Tout responsable" },
-                          ...approvers.map((u) => ({ value: u.id, label: u.fullName })),
-                        ]}
-                      />
-                    </Field>
-                  )}
-                />
-                <Field className="sm:col-span-2">
-                  <FieldLabel htmlFor="adminComment">Commentaire administrateur</FieldLabel>
-                  <Textarea id="adminComment" rows={2} {...form.register("adminComment")} />
-                </Field>
-              </FieldGroup>
-            </FormSection>
-          )}
         </div>
 
         <aside className="flex flex-col gap-4 xl:sticky xl:top-20 xl:self-start">
